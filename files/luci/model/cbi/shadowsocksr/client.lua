@@ -90,10 +90,11 @@ obfs = {
 uci:foreach(shadowsocksr, "servers", function(s)
     if s.alias then
         server_table[s[".name"]] = s.alias
+        server_count = server_count + 1
     elseif s.server and s.server_port then
         server_table[s[".name"]] = "%s:%s" % {s.server, s.server_port}
+        server_count = server_count + 1
     end
-    server_count = server_count + 1
 end)
 
 -- [[ Global Setting ]]--
@@ -103,17 +104,21 @@ s.anonymous = true
 o = s:option(Flag, "enable", translate("启用"))
 o.rmempty = false
 
-o = s:option(ListValue, "global_server", translate("服务器"), translate("提示：到页面底部管理服务器"))
-if haproxy_flag == 1 and server_count > 1 then
-    o:value("__haproxy__", translate("负载均衡"))
+o = s:option(ListValue, "global_server", translate("服务器"))
+if server_count > 0 then
+    if haproxy_flag == 1 and server_count > 1 then
+        o:value("__haproxy__", translate("负载均衡"))
+    end
+    for k, v in pairs(server_table) do o:value(k, v) end
+else
+    o:value("nil", translate("请到页面底部添加服务器"))
 end
-for k, v in pairs(server_table) do o:value(k, v) end
 o.default = "nil"
 o.rmempty = false
 
 o = s:option(ListValue, "udp_relay_server", translate("UDP 中继服务器"))
 o:value("", translate("停用"))
-o:value("same", translate("与全局服务器相同"))
+o:value("same", translate("同上面服务器"))
 for k, v in pairs(server_table) do o:value(k, v) end
 
 o = s:option(Flag, "monitor_enable", translate("启用进程监控"))
@@ -149,7 +154,7 @@ else
     o.rmempty = false
     
     if pdnsd_flag == 1 then
-        o = s:option(ListValue, "pdnsd_enable", translate("DNS 解析方式"))
+        o = s:option(ListValue, "pdnsd_enable", translate("DNS 解析方式"), translate("如果固件缺少 TPROXY 内核模块，GFW 模式下请使用 pdnsd"))
         o:value("0", translate("使用 DNS 隧道"))
         o:value("1", translate("使用 pdnsd"))
         o.rmempty = false
@@ -232,7 +237,7 @@ sec:tab("shadowsocksr", translate("客户端"))
 
 o = sec:option(DummyValue, "alias", translate("别名"))
 function o.cfgvalue(...)
-    return Value.cfgvalue(...) or translate("None")
+    return Value.cfgvalue(...) or translate("无")
 end
 
 o = sec:option(DummyValue, "server", translate("服务器地址"))
@@ -262,12 +267,17 @@ end
 
 o = sec:option(DummyValue, "kcp_enable", translate("KcpTun"))
 function o.cfgvalue(...)
-    return Value.cfgvalue(...) or "?"
+    return Value.cfgvalue(...) == "1" and "是" or "否"
 end
 
 o = sec:option(DummyValue, "switch_enable", translate("自动切换"))
 function o.cfgvalue(...)
-    return Value.cfgvalue(...) or "0"
+    return Value.cfgvalue(...) == "1" and "是" or "否"
+end
+
+o = sec:option(DummyValue, "weight", translate("权重"))
+function o.cfgvalue(...)
+    return Value.cfgvalue(...) or "10"
 end
 
 return m
