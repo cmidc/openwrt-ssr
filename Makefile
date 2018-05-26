@@ -112,6 +112,7 @@ EOF
 	/etc/init.d/shadowsocksr enable >/dev/null 2>&1
 
 	if [ "$(1)" = "GFW" ] ;then
+		sed -i '/--conf-dir=\/etc\/dnsmasq.ssr/d' /etc/init.d/dnsmasq
 		sed -i '/args=""/a append args "--conf-dir=/etc/dnsmasq.ssr"' /etc/init.d/dnsmasq
 		/etc/init.d/dnsmasq restart
 	fi
